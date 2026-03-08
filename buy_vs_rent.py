@@ -27,7 +27,7 @@ def calculate_monthly_installment(loan_amount, monthly_interest_rate, loan_term_
     return P * r * (1 + r) ** n / ((1 + r) ** n - 1)
 
 
-st.title("Rent or Buy")
+st.title("Rent or buy a Home calculator")
 
 st.header("Parameters")
 
@@ -42,33 +42,35 @@ total_years = st.slider(
     max_value=60,
     format="%d years",
     bind="query-params",
+    help="Time horizon for the analysis.",
 )
-real_estate_price = (
+current_real_estate_price = (
     st.slider(
         "Real Estate Price",
-        key="real_estate_price_millions",
+        key="current_real_estate_price_m",
         value=55,
         min_value=30,
         max_value=100,
         format="%dM HUF",
         bind="query-params",
+        help="Current price of the real estate you are planning to buy.",
     )
     * 1_000_000
 )
 current_monthly_rent_price = (
     st.slider(
         "Rent Price (monthly)",
-        key="current_rent_price_k",
+        key="current_monthly_rent_price_k",
         value=220,
         min_value=0,
         max_value=500,
         step=10,
         format="%dK HUF",
         bind="query-params",
+        help="Current monthly rent price for the property.",
     )
     * 1_000
 )
-
 
 with st.expander("Mortgage"):
     with st.container(border=True):
@@ -80,12 +82,13 @@ with st.expander("Mortgage"):
             max_value=25,
             format="%d years",
             bind="query-params",
+            help="The duration of the mortgage loan in years.",
         )
 
         mortgage_interest_rate = (
             st.slider(
                 "Mortgage Interest Rate",
-                key="mortgage_interest_rate_percent",
+                key="mortgage_interest_rate_p",
                 value=3.0,
                 min_value=0.0,
                 max_value=30.0,
@@ -99,13 +102,14 @@ with st.expander("Mortgage"):
         max_mortgage_amount = (
             st.slider(
                 "Maximum Mortgage Amount",
-                key="max_mortgage_amount_millions",
+                key="max_mortgage_amount_m",
                 value=50,
                 min_value=50,
                 max_value=100,
                 step=5,
                 format="%dM HUF",
                 bind="query-params",
+                help="The maximum amount you can borrow for the mortgage.",
             )
             * 1_000_000
         )
@@ -118,12 +122,15 @@ with st.expander("Mortgage"):
             max_value=100,
             format="%d%%",
             bind="query-params",
+            help="The minimum percentage of the real estate price that must be paid as a down payment.",
         )
 
-    min_down_payment = real_estate_price * min_down_payment_percent / 100
-    min_down_payment = max(min_down_payment, real_estate_price - max_mortgage_amount)
+    min_down_payment = current_real_estate_price * min_down_payment_percent / 100
+    min_down_payment = max(
+        min_down_payment, current_real_estate_price - max_mortgage_amount
+    )
     min_down_payment_percent = int(
-        math.ceil(min_down_payment / real_estate_price * 100)
+        math.ceil(min_down_payment / current_real_estate_price * 100)
     )
 
     down_payment_percent = st.slider(
@@ -134,10 +141,14 @@ with st.expander("Mortgage"):
         max_value=100,
         format="%d%%",
         bind="query-params",
+        help=f"""
+            The percentage of the real estate price that you will pay as a down payment.
+            Must be at least {min_down_payment_percent}% to meet the minimum down payment requirement.
+        """,
     )
 
-    down_payment = real_estate_price * down_payment_percent / 100
-    loan_amount = real_estate_price - down_payment
+    down_payment = current_real_estate_price * down_payment_percent / 100
+    loan_amount = current_real_estate_price - down_payment
     monthly_installment = calculate_monthly_installment(
         loan_amount, mortgage_interest_rate / 12, loan_term_years * 12
     )
@@ -191,6 +202,7 @@ with st.expander("Initial Real Estate Purchase Costs"):
         step=0.05,
         format="%f%%",
         bind="query-params",
+        help="The percentage of the real estate price that you will pay as a lawyer fee.",
     )
     additional_loan_costs_k = st.slider(
         "Additional Costs",
@@ -202,54 +214,72 @@ with st.expander("Initial Real Estate Purchase Costs"):
         format="%dK HUF",
         bind="query-params",
         help="""
+            Additional costs related to the real estate purchase and mortgage loan.
+
             E.g.: értékbecslés, közjegyzői díj, folyósítási jutalék,
             hitelösszeg átutalási díja, tulajdoni lap lekérdezése,
             jelzálogjog bejegyzés díja etc...
         """,
     )
 
-    lawyer_fee = real_estate_price * lawyer_fee_percent / 100
-    transfer_tax = real_estate_price * TRANSFER_TAX
+    lawyer_fee = current_real_estate_price * lawyer_fee_percent / 100
+    transfer_tax = current_real_estate_price * TRANSFER_TAX
     additional_loan_costs = additional_loan_costs_k * 1_000
     capital_cost_of_buying = lawyer_fee + transfer_tax + additional_loan_costs
 
-    name_col, value_col = st.columns(2)
+    with st.container(border=True):
+        name_col, value_col = st.columns(2)
+        name_col.write("Total Initial Costs")
+        value_col.write(f"{capital_cost_of_buying / 1_000_000:.2f}M HUF")
 
-    name_col.write("Lawyer Fee")
-    value_col.write(f"{lawyer_fee / 1_000:.2f}K HUF")
+        with st.container():
+            name_col, value_col = st.columns(2)
+            name_col.write(f"Transfer Tax ({TRANSFER_TAX * 100:.2f}%)")
+            value_col.progress(
+                transfer_tax / capital_cost_of_buying,
+                text=f"{transfer_tax / 1_000_000:.2f}M HUF",
+            )
 
-    name_col.write(f"Transfer Tax ({TRANSFER_TAX * 100:.2f}%)")
-    value_col.write(f"{transfer_tax / 1_000_000:.2f}M HUF")
+        with st.container():
+            name_col, value_col = st.columns(2)
+            name_col.write("Lawyer Fee")
+            value_col.progress(
+                lawyer_fee / capital_cost_of_buying,
+                text=f"{lawyer_fee / 1_000:.2f}K HUF",
+            )
 
-    name_col.write("Additional Costs")
-    value_col.write(f"{additional_loan_costs / 1_000:.2f}K HUF")
+        with st.container():
+            name_col, value_col = st.columns(2)
+            name_col.write("Additional Costs")
+            value_col.progress(
+                additional_loan_costs / capital_cost_of_buying,
+                text=f"{additional_loan_costs / 1_000:.2f}K HUF",
+            )
 
-    name_col.write("Total Initial Costs")
-    value_col.write(f"{capital_cost_of_buying / 1_000_000:.2f}M HUF")
 
-
-with st.expander("Environmental Parameters"):
+with st.expander("Market Fundamentals"):
     rate_names = dict(
-        appreciation="Real Estate Value",
+        appreciation="Real Estate Appreciation",
         investment_return="Investment Return",
-        rent_change="Rent",
+        rent_change="Rent Change",
     )
     initial_rate_percents = {
         rn: st.slider(
             rd,
-            key=f"initial_{rn}_rate_percent",
+            key=f"initial_{rn}_rate_pct",
             value=3.0,
             min_value=0.0,
             max_value=30.0,
             step=0.1,
             format="%f%%",
             bind="query-params",
+            help=f"The {rd.lower()} rate for the current year ({CURRENT_YEAR}). Customize the future rates in the table below as relative changes compared to the previous year.",
         )
         for rn, rd in rate_names.items()
     }
 
     st.space()
-    with st.expander("Annual Relative Environmental Changes"):
+    with st.expander("Annual Relative Changes of Market Fundamentals"):
         st.warning("""
             Table values are not included in the URL!
 
@@ -301,6 +331,7 @@ with st.expander("Environmental Parameters"):
 
         st.button("Reset", on_click=reset_env_vars, icon="⚠️")
 
+        st.space()
         st.write("Calculated Cumulative Changes")
         df_relative_env_vars_calculated = df_relative_env_vars.copy()
 
@@ -405,7 +436,7 @@ def buy_model():
     res = []
 
     payed = down_payment
-    value_of_real_estate = real_estate_price
+    value_of_real_estate = current_real_estate_price
     for year_index in range(total_years + 1):
         appreciation_rate = df_relative_env_vars_calculated["appreciation_rate"].iloc[
             year_index
