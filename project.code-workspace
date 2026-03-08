@@ -1,0 +1,39 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"window.title": "${activeEditorShort}${separator}${folderName}${separator}Financial",
+		"files.insertFinalNewline": true,
+		"files.trimFinalNewlines": true,
+		"files.trimTrailingWhitespace": true,
+		"editor.codeActionsOnSave": {
+			"source.fixAll": "explicit"
+		},
+		"notebook.formatOnSave.enabled": true,
+		"[python]": {
+			"editor.defaultFormatter": "charliermarsh.ruff",
+			"editor.formatOnSave": true,
+		},
+		"files.exclude": {
+			"**/.git": true,
+			"**/.svn": true,
+			"**/.hg": true,
+			"**/CVS": true,
+			"**/__pycache__": true,
+			"**/*.egg-info": true,
+			"**/.pytest_cache": true,
+			"**/.DS_Store": true,
+			"**/Thumbs.db": true
+		}
+	},
+	"extensions": {
+		"recommendations": [
+			"eamodio.gitlens",
+			"ms-toolsai.jupyter",
+			"charliermarsh.ruff",
+		]
+	}
+}
